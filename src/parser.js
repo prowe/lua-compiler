@@ -95,7 +95,9 @@ function isAdditionOperator(token) {
 function isInfixOperator(token) {
     return isExponentOperator(token) ||
         isProductOperator(token) ||
-        isAdditionOperator(token);
+        isAdditionOperator(token) ||
+        token === "or" ||
+        token === "and";
 }
 
 /**
@@ -109,7 +111,8 @@ function parseNextExpression(tokens) {
         const right = parseNextExpression(tokens);
         const multiplicationOverAddition = isProductOperator(type) && isAdditionOperator(right.type);
         const exponentOverOther = type === "^" && isInfixOperator(right.type);
-        if (multiplicationOverAddition || exponentOverOther) {
+        const orOverAnd = type === "or" && right.type === "and";
+        if (multiplicationOverAddition || exponentOverOther || orOverAnd) {
             return {
                 type: right.type,
                 left: {
@@ -152,6 +155,32 @@ function buildFunctionCall(tokens, left) {
     };
 }
 
+function buildParenExpression(tokens) {
+    shiftExpected(tokens, "(");
+    const expression = parseNextExpression(tokens);
+    shiftExpected(tokens, ")");
+    return {
+        type: "block",
+        children: [ expression ]
+    };
+}
+
+function buildNotExpression(tokens) {
+    shiftExpected(tokens, "not");
+    return {
+        type: "not",
+        expression: parseNextExpression(tokens)
+    };
+}
+
+function buildBooleanLiteral(tokens, value) {
+    tokens.shift();
+    return {
+        type: "literal",
+        value: value
+    };
+}
+
 /**
  * 
  * @param {String[]} tokens 
@@ -162,14 +191,10 @@ function parseNextPrefixExpression(tokens) {
         case "local": return buildAssignment(tokens);
         case "function": return buildFunctionDeclaration(tokens);
         case "return": return buildReturn(tokens);
-        case "(":
-            tokens.shift();
-            const expression = parseNextExpression(tokens);
-            shiftExpected(tokens, ")");
-            return {
-                type: "block",
-                children: [ expression ]
-            };
+        case "(": return buildParenExpression(tokens);
+        case "not": return buildNotExpression(tokens);
+        case "true": return buildBooleanLiteral(tokens, true);
+        case "false": return buildBooleanLiteral(tokens, false);
     }
 
     if (Number.isInteger(Number.parseInt(head))) {

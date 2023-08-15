@@ -306,7 +306,7 @@ test("exponent order of operations", () => {
     });
 });
 
-test("exponentover modulus", () => {
+test("exponent over modulus", () => {
     const ast = parse("1 ^ 2 % 3");
     expect(ast).toEqual({
         type: "block",
@@ -335,7 +335,6 @@ test("exponentover modulus", () => {
 
 test("parenthesis", () => {
     const ast = parse("1 * ( 2 + 3)");
-    console.log(JSON.stringify(ast, null, 2))
     expect(ast).toEqual({
         type: "block",
         children: [
@@ -360,6 +359,69 @@ test("parenthesis", () => {
                             }
                         }
                     ]
+                }
+            }
+        ]
+    });
+});
+
+test("not operator", () => {
+    const ast = parse("not true");
+    expect(ast).toEqual({
+        type: "block",
+        children: [
+            {
+                type: "not",
+                expression: {
+                    type: "literal",
+                    value: true
+                }
+            }
+        ]
+    });
+});
+
+test("or operator", () => {
+    const ast = parse("true or false");
+    expect(ast).toEqual({
+        type: "block",
+        children: [
+            {
+                type: "or",
+                left: {
+                    type: "literal",
+                    value: true
+                },
+                right: {
+                    type: "literal",
+                    value: false
+                }
+            }
+        ]
+    });
+});
+
+test("boolean order of operations", () => {
+    const ast = parse("true or false and true");
+    expect(ast).toEqual({
+        type: "block",
+        children: [
+            {
+                type: "and",
+                left: {
+                    type: "or",
+                    left: {
+                        type: "literal",
+                        value: true
+                    },
+                    right: {
+                        type: "literal",
+                        value: false
+                    }
+                },
+                right: {
+                    type: "literal",
+                    value: true
                 }
             }
         ]
