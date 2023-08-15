@@ -1,0 +1,200 @@
+import { tokenize } from "./tokenizer";
+
+/**
+ * 
+ * @param {String[]} tokens
+ * @param {String} expectedToken
+ */
+function shiftExpected(tokens, expectedToken) {
+    const shifted = tokens.shift();
+    if (shifted !== expectedToken) {
+        throw new Error(`Unexpected token. Got ${shifted}, expected: ${expectedToken}`);
+    }
+}
+
+function buildAssignment(tokens) {
+    tokens.shift();
+    const varName = tokens.shift();
+    shiftExpected(tokens, "=");
+    const expression = parseNextExpression(tokens);
+    return {
+        type: "assignment",
+        local: true,
+        varName,
+        expression
+    }
+}
+
+function buildFunctionDeclaration(tokens) {
+    tokens.shift();
+    const name = tokens.shift();
+    shiftExpected(tokens, "(");
+    const parameters = [];
+    while (true) {
+        const paramHead = tokens.shift();
+        if (paramHead === ")") {
+            break;
+        }
+        if (paramHead !== ",") {
+            parameters.push(paramHead);
+        }
+    }
+    const children = [];
+    while(tokens[0] !== "end") {
+        children.push(parseNextExpression(tokens));
+    }
+    shiftExpected(tokens, "end");
+    return {
+        type: "function-declaration",
+        name,
+        parameters,
+        children
+    };
+}
+
+function buildReturn(tokens) {
+    tokens.shift();
+    return {
+        type: "return",
+        expression: parseNextExpression(tokens)
+    };
+}
+
+/**
+ * 
+ * @param {String} token 
+ * @returns {Boolean}
+ */
+function isExponentOperator(token) {
+    return token === "^";
+}
+
+/**
+ * 
+ * @param {String} token 
+ * @returns {Boolean}
+ */
+function isProductOperator(token) {
+    return ["*", "/",  "%"].includes(token);
+} 
+
+/**
+ * 
+ * @param {String} token 
+ * @returns {Boolean}
+ */
+function isAdditionOperator(token) {
+    return ["+", "-"].includes(token);
+}
+
+/**
+ * 
+ * @param {String} token 
+ * @returns {Boolean}
+ */
+function isInfixOperator(token) {
+    return isExponentOperator(token) ||
+        isProductOperator(token) ||
+        isAdditionOperator(token);
+}
+
+/**
+ * 
+ * @param {String[]} tokens 
+ */
+function parseNextExpression(tokens) {
+    const left = parseNextPrefixExpression(tokens);
+    if (isInfixOperator(tokens[0])) {
+        const type = tokens.shift();
+        const right = parseNextExpression(tokens);
+        const multiplicationOverAddition = isProductOperator(type) && isAdditionOperator(right.type);
+        const exponentOverOther = type === "^" && isInfixOperator(right.type);
+        if (multiplicationOverAddition || exponentOverOther) {
+            return {
+                type: right.type,
+                left: {
+                    type,
+                    left,
+                    right: right.left,
+                },
+                right: right.right
+            };
+        }
+        return {
+            type,
+            left,
+            right
+        };
+    }
+    if (tokens[0] === '(' && left.type === "variable-reference") {
+        tokens.shift();
+        return buildFunctionCall(tokens, left);
+    }
+    return left;
+}
+
+function buildFunctionCall(tokens, left) {
+    const parameters = [];
+    while (true) {
+        if (tokens[0] === ")") {
+            tokens.shift();
+            break;
+        } else if (tokens[0] === ",") {
+            tokens.shift();
+        } else {
+            parameters.push(parseNextExpression(tokens));
+        }
+    }
+    return {
+        type: "function-call",
+        func: left,
+        parameters
+    };
+}
+
+/**
+ * 
+ * @param {String[]} tokens 
+ */
+function parseNextPrefixExpression(tokens) {
+    const head = tokens[0];
+    switch (head) {
+        case "local": return buildAssignment(tokens);
+        case "function": return buildFunctionDeclaration(tokens);
+        case "return": return buildReturn(tokens);
+        case "(":
+            tokens.shift();
+            const expression = parseNextExpression(tokens);
+            shiftExpected(tokens, ")");
+            return {
+                type: "block",
+                children: [ expression ]
+            };
+    }
+
+    if (Number.isInteger(Number.parseInt(head))) {
+        tokens.shift();
+        return {
+            type: "literal",
+            value: Number.parseInt(head)
+        }
+    }
+
+    return {
+        type: "variable-reference",
+        varName: tokens.shift()
+    };
+}
+
+export function parse(codeString) {
+    const tokens = tokenize(codeString);
+    const topLevelBlock = {
+        type: "block",
+        children: []
+    };
+    while (tokens.length > 0) {
+        topLevelBlock.children.push(parseNextExpression(tokens));
+    }
+
+    return topLevelBlock;
+}
