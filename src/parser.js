@@ -181,6 +181,16 @@ function buildBooleanLiteral(tokens, value) {
     };
 }
 
+function buildStringLiteral(tokens) {
+    shiftExpected(tokens, '"');
+    const value = tokens.shift();
+    shiftExpected(tokens, '"');
+    return {
+        type: "literal",
+        value
+    };
+}
+
 /**
  * 
  * @param {String[]} tokens 
@@ -195,6 +205,7 @@ function parseNextPrefixExpression(tokens) {
         case "not": return buildNotExpression(tokens);
         case "true": return buildBooleanLiteral(tokens, true);
         case "false": return buildBooleanLiteral(tokens, false);
+        case '"': return buildStringLiteral(tokens);
     }
 
     if (Number.isInteger(Number.parseInt(head))) {

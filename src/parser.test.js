@@ -427,3 +427,16 @@ test("boolean order of operations", () => {
         ]
     });
 });
+
+test("parse string as literal", () => {
+    const ast = parse('"hello world"');
+    expect(ast).toEqual({
+        type: "block",
+        children: [
+            {
+                type: "literal",
+                value: "hello world"
+            }
+        ]
+    });
+});
