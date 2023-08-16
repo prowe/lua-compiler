@@ -19,6 +19,24 @@ test("simple assignment expression", () => {
     });
 });
 
+test("assignment without the local keyword", () => {
+    const ast = parse("x = 5");
+    expect(ast).toEqual({
+        type: "block",
+        children: [
+            {
+                type: "assignment",
+                local: false,
+                varName: "x",
+                expression: {
+                    type: "literal",
+                    value: 5
+                }
+            }
+        ]
+    });
+})
+
 test("throws when = is not present", () => {
     expect(() => parse("local x % 5")).toThrowError("Unexpected token. Got %, expected: =");
 });

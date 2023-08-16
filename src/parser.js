@@ -12,14 +12,13 @@ function shiftExpected(tokens, expectedToken) {
     }
 }
 
-function buildAssignment(tokens) {
-    tokens.shift();
+function buildAssignment(tokens, local) {
     const varName = tokens.shift();
     shiftExpected(tokens, "=");
     const expression = parseNextExpression(tokens);
     return {
         type: "assignment",
-        local: true,
+        local,
         varName,
         expression
     }
@@ -197,8 +196,13 @@ function buildStringLiteral(tokens) {
  */
 function parseNextPrefixExpression(tokens) {
     const head = tokens[0];
+    if( tokens.length > 1 && tokens[1] === "=") {
+        return buildAssignment(tokens, false);
+    }
     switch (head) {
-        case "local": return buildAssignment(tokens);
+        case "local":
+            tokens.shift();
+            return buildAssignment(tokens, true);
         case "function": return buildFunctionDeclaration(tokens);
         case "return": return buildReturn(tokens);
         case "(": return buildParenExpression(tokens);
