@@ -1,8 +1,19 @@
 import { parse } from "./parser";
 
 class Environment {
-    constructor() {
-        this.stack = [{}];
+    /**
+     * 
+     * @param {{output: Function}} envHooks 
+     */
+    constructor({output}) {
+        this.stack = [{
+            print: {
+                builtIn(args) {
+                    output.call(undefined, ...args);
+                    return {value: ""};
+                }
+            }
+        }];
     }
 
     evaluateNode(astNode) {
@@ -94,11 +105,36 @@ class Environment {
         }
         throw new Error(`Variable not found: ${varName}`);
     }
+
+    "function-declaration"({name, parameters, children}) {
+        this.stack[0][name] = {
+            parameters,
+            children
+        };
+    }
+
+    "function-call"({func, parameters}) {
+        const funcDeclaration = this.evaluateNode(func);
+        this.stack.unshift({});
+        const parameterValues = parameters.map(exp => this.evaluateNode(exp));
+        if (funcDeclaration.builtIn) {
+            const args = parameterValues.map(v => v.value);
+            const result = funcDeclaration.builtIn(args);
+            this.stack.shift();
+            return result;
+        }
+        funcDeclaration.parameters.forEach((paramName, index) => {
+            this.stack[0][paramName] = parameterValues[index]; 
+        });
+        const result = this.block({children: funcDeclaration.children});
+        this.stack.shift();
+        return result;
+    }
 };
 
 
-export function executeCode(codeString) {
+export function executeCode(codeString, envHooks) {
     const ast = parse(codeString);
-    const env = new Environment();
+    const env = new Environment(envHooks);
     return env.evaluateNode(ast);
 }
