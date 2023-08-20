@@ -1,8 +1,8 @@
 import { expect, test, vi } from "vitest";
-import { executeCode } from "./runtime"
+import { EnvHooks, executeCode } from "./runtime"
 
-const envHooks = {
-    output(val) {
+const envHooks: EnvHooks = {
+    output(val: any) {
         console.log(val);
     }
 }

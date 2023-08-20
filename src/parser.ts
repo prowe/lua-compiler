@@ -1,19 +1,67 @@
-import { tokenize } from "./tokenizer";
+import { tokenize, Token } from "./tokenizer";
 
-/**
- * 
- * @param {String[]} tokens
- * @param {String} expectedToken
- */
-function shiftExpected(tokens, expectedToken) {
+export interface TreeNode {
+    type: string;
+}
+export interface BlockNode extends TreeNode {
+    type: "block";
+    children: TreeNode[];
+}
+export interface ReturnNode extends TreeNode {
+    type: "return";
+    expression: TreeNode;
+}
+export interface FunctionDeclarationNode extends TreeNode {
+    type: "function-declaration";
+    name: string;
+    parameters: string[];
+    children: TreeNode[];
+}
+export interface FunctionCallNode extends TreeNode {
+    type: "function-call";
+    func: TreeNode;
+    parameters: TreeNode[];
+}
+export interface AssignmentNode extends TreeNode {
+    type: "assignment";
+    local: Boolean;
+    varName: string;
+    expression: TreeNode;
+}
+
+type ProductOperator = "*" | "/" | "%";
+type AdditionOperator = "+" | "-";
+type BooleanOperator = "or" | "and";
+type ExponentOperator = "^";
+type InfixOperator = ProductOperator | AdditionOperator | BooleanOperator | ExponentOperator;
+
+export interface InfixOperatorNode extends TreeNode {
+    type: InfixOperator;
+    left: TreeNode;
+    right: TreeNode;
+}
+export interface NotNode extends TreeNode {
+    type: "not";
+    expression: TreeNode;
+}
+export interface LiteralNode extends TreeNode {
+    type: "literal";
+    value: any;
+}
+export interface VariableReferenceNode extends TreeNode {
+    type: "variable-reference";
+    varName: string;
+}
+
+function shiftExpected(tokens: Token[], expectedToken: Token) {
     const shifted = tokens.shift();
     if (shifted !== expectedToken) {
         throw new Error(`Unexpected token. Got ${shifted}, expected: ${expectedToken}`);
     }
 }
 
-function buildAssignment(tokens, local) {
-    const varName = tokens.shift();
+function buildAssignment(tokens: Token[], local: boolean): AssignmentNode {
+    const varName = tokens.shift()!;
     shiftExpected(tokens, "=");
     const expression = parseNextExpression(tokens);
     return {
@@ -24,18 +72,18 @@ function buildAssignment(tokens, local) {
     }
 }
 
-function buildFunctionDeclaration(tokens) {
+function buildFunctionDeclaration(tokens: Token[]): FunctionDeclarationNode {
     tokens.shift();
-    const name = tokens.shift();
+    const name = tokens.shift()!;
     shiftExpected(tokens, "(");
-    const parameters = [];
+    const parameters: string[] = [];
     while (true) {
         const paramHead = tokens.shift();
         if (paramHead === ")") {
             break;
         }
         if (paramHead !== ",") {
-            parameters.push(paramHead);
+            parameters.push(paramHead!);
         }
     }
     const children = [];
@@ -51,7 +99,7 @@ function buildFunctionDeclaration(tokens) {
     };
 }
 
-function buildReturn(tokens) {
+function buildReturn(tokens: Token[]): ReturnNode {
     tokens.shift();
     return {
         type: "return",
@@ -59,74 +107,54 @@ function buildReturn(tokens) {
     };
 }
 
-/**
- * 
- * @param {String} token 
- * @returns {Boolean}
- */
-function isExponentOperator(token) {
+function isExponentOperator(token: Token): token is ExponentOperator {
     return token === "^";
 }
 
-/**
- * 
- * @param {String} token 
- * @returns {Boolean}
- */
-function isProductOperator(token) {
+function isProductOperator(token: Token): token is ProductOperator {
     return ["*", "/",  "%"].includes(token);
 } 
 
-/**
- * 
- * @param {String} token 
- * @returns {Boolean}
- */
-function isAdditionOperator(token) {
+function isAdditionOperator(token: Token): token is AdditionOperator {
     return ["+", "-"].includes(token);
 }
 
-/**
- * 
- * @param {String} token 
- * @returns {Boolean}
- */
-function isInfixOperator(token) {
+function isInfixOperator(token: Token): token is InfixOperator {
     return isExponentOperator(token) ||
         isProductOperator(token) ||
         isAdditionOperator(token) ||
         token === "or" ||
         token === "and";
 }
+function isInfixOperatorNode(node: TreeNode): node is InfixOperatorNode {
+    return isInfixOperator(node.type);
+}
 
-/**
- * 
- * @param {String[]} tokens 
- */
-function parseNextExpression(tokens) {
+function parseNextExpression(tokens: Token[]): TreeNode {
     const left = parseNextPrefixExpression(tokens);
     if (isInfixOperator(tokens[0])) {
-        const type = tokens.shift();
+        const type = tokens.shift()!;
         const right = parseNextExpression(tokens);
-        const multiplicationOverAddition = isProductOperator(type) && isAdditionOperator(right.type);
-        const exponentOverOther = type === "^" && isInfixOperator(right.type);
-        const orOverAnd = type === "or" && right.type === "and";
-        if (multiplicationOverAddition || exponentOverOther || orOverAnd) {
+        const rightType = right.type;
+        const multiplicationOverAddition = isProductOperator(type) && isAdditionOperator(rightType);
+        const exponentOverOther = type === "^" && isInfixOperator(rightType);
+        const orOverAnd = type === "or" && rightType === "and";
+        if ((multiplicationOverAddition || exponentOverOther || orOverAnd)) {
             return {
-                type: right.type,
+                type: rightType,
                 left: {
                     type,
                     left,
-                    right: right.left,
-                },
-                right: right.right
-            };
+                    right: (right as InfixOperatorNode).left,
+                } as InfixOperatorNode,
+                right: (right as InfixOperatorNode).right
+            } as InfixOperatorNode;
         }
         return {
             type,
             left,
             right
-        };
+        } as InfixOperatorNode;
     }
     if (tokens[0] === '(' && left.type === "variable-reference") {
         tokens.shift();
@@ -135,8 +163,8 @@ function parseNextExpression(tokens) {
     return left;
 }
 
-function buildFunctionCall(tokens, left) {
-    const parameters = [];
+function buildFunctionCall(tokens: Token[], left: TreeNode) {
+    const parameters: TreeNode[] = [];
     while (true) {
         if (tokens[0] === ")") {
             tokens.shift();
@@ -151,10 +179,10 @@ function buildFunctionCall(tokens, left) {
         type: "function-call",
         func: left,
         parameters
-    };
+    } satisfies FunctionCallNode;
 }
 
-function buildParenExpression(tokens) {
+function buildParenExpression(tokens: Token[]) {
     shiftExpected(tokens, "(");
     const expression = parseNextExpression(tokens);
     shiftExpected(tokens, ")");
@@ -164,7 +192,7 @@ function buildParenExpression(tokens) {
     };
 }
 
-function buildNotExpression(tokens) {
+function buildNotExpression(tokens: Token[]): NotNode {
     shiftExpected(tokens, "not");
     return {
         type: "not",
@@ -172,7 +200,7 @@ function buildNotExpression(tokens) {
     };
 }
 
-function buildBooleanLiteral(tokens, value) {
+function buildBooleanLiteral(tokens: Token[], value: boolean) {
     tokens.shift();
     return {
         type: "literal",
@@ -180,7 +208,7 @@ function buildBooleanLiteral(tokens, value) {
     };
 }
 
-function buildStringLiteral(tokens) {
+function buildStringLiteral(tokens: Token[]) {
     shiftExpected(tokens, '"');
     const value = tokens.shift();
     shiftExpected(tokens, '"');
@@ -190,11 +218,7 @@ function buildStringLiteral(tokens) {
     };
 }
 
-/**
- * 
- * @param {String[]} tokens 
- */
-function parseNextPrefixExpression(tokens) {
+function parseNextPrefixExpression(tokens: Token[]): TreeNode {
     const head = tokens[0];
     if( tokens.length > 1 && tokens[1] === "=") {
         return buildAssignment(tokens, false);
@@ -217,21 +241,21 @@ function parseNextPrefixExpression(tokens) {
         return {
             type: "literal",
             value: Number.parseInt(head)
-        }
+        } as LiteralNode
     }
 
     return {
         type: "variable-reference",
-        varName: tokens.shift()
-    };
+        varName: tokens.shift()!
+    } as VariableReferenceNode;
 }
 
-export function parse(codeString) {
+export function parse(codeString: string) {
     const tokens = tokenize(codeString);
     const topLevelBlock = {
         type: "block",
         children: []
-    };
+    } as BlockNode;
     while (tokens.length > 0) {
         topLevelBlock.children.push(parseNextExpression(tokens));
     }

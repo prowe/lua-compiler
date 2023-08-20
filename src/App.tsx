@@ -2,9 +2,9 @@ import { FormEventHandler, useReducer, useState } from 'react'
 import styles from "./App.module.css";
 import {executeCode} from "./runtime.js";
 
-function outputLinesReducer(existingLines: string[], line: string) {
-  return [...existingLines, line];
-}
+// function outputLinesReducer(existingLines: string[], line: string) {
+//   return [...existingLines, line];
+// }
 
 function App() {
   const [code, setCode] = useState("");
@@ -15,7 +15,7 @@ function App() {
 
     const lines = [];
     const envHooks = {
-      output(...args) {
+      output(...args: any[]) {
         lines.push(args.join(" "));
       }
     }
@@ -23,7 +23,7 @@ function App() {
       const result = executeCode(code, envHooks);
       lines.push(`${result.value}`);
     } catch (e) {
-      lines.push(`Error: ${e.toString()}`);
+      lines.push(`Error: ${e}`);
     }
     setOutputLines(lines);
   };

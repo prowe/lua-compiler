@@ -1,10 +1,6 @@
+export type Token = string;
 
-/**
- * 
- * @param {String} codeString 
- * @returns {String[]}
- */
-export function tokenize(codeString) {
+export function tokenize(codeString: string) {
     const tokens = [];
     let currentToken = "";
     const pushCurrentToken = () => {
