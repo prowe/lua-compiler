@@ -28,6 +28,10 @@ export interface AssignmentNode extends TreeNode {
     varName: string;
     expression: TreeNode;
 }
+export interface TableNode extends TreeNode {
+    type: "table",
+    entries: Record<string, TreeNode>;
+}
 
 type ProductOperator = "*" | "/" | "%";
 type AdditionOperator = "+" | "-";
@@ -52,6 +56,11 @@ export interface VariableReferenceNode extends TreeNode {
     type: "variable-reference";
     varName: string;
 }
+export interface DereferenceNode extends TreeNode {
+    type: "dereference";
+    scopeExpression: TreeNode;
+    expression: TreeNode;
+}
 
 function shiftExpected(tokens: Token[], expectedToken: Token) {
     const shifted = tokens.shift();
@@ -72,8 +81,21 @@ function buildAssignment(tokens: Token[], local: boolean): AssignmentNode {
     }
 }
 
-function buildFunctionDeclaration(tokens: Token[]): FunctionDeclarationNode {
+function buildFunctionDeclaration(tokens: Token[]): FunctionDeclarationNode | DereferenceNode {
     tokens.shift();
+    if(tokens[1] === ":") {
+        const scopeExpression: VariableReferenceNode = {
+            type: "variable-reference",
+            varName: tokens.shift()!
+        };
+        const expression = buildFunctionDeclaration(tokens);
+        return {
+            type: "dereference",
+            scopeExpression,
+            expression
+        };
+    }
+
     const name = tokens.shift()!;
     shiftExpected(tokens, "(");
     const parameters: string[] = [];
@@ -126,9 +148,6 @@ function isInfixOperator(token: Token): token is InfixOperator {
         token === "or" ||
         token === "and";
 }
-function isInfixOperatorNode(node: TreeNode): node is InfixOperatorNode {
-    return isInfixOperator(node.type);
-}
 
 function parseNextExpression(tokens: Token[]): TreeNode {
     const left = parseNextPrefixExpression(tokens);
@@ -159,6 +178,14 @@ function parseNextExpression(tokens: Token[]): TreeNode {
     if (tokens[0] === '(' && left.type === "variable-reference") {
         tokens.shift();
         return buildFunctionCall(tokens, left);
+    }
+    if (tokens[0] === ':' || tokens[0] === ".") {
+        tokens.shift();
+        return {
+            type: "dereference",
+            scopeExpression: left,
+            expression: parseNextExpression(tokens)
+        } as DereferenceNode
     }
     return left;
 }
@@ -218,6 +245,28 @@ function buildStringLiteral(tokens: Token[]) {
     };
 }
 
+function buildTable(tokens: Token[]): TableNode {
+    shiftExpected(tokens, "{");
+    const entries: Record<string, TreeNode> = {};
+    while (true) {
+        if (tokens[0] === "}") {
+            tokens.shift();
+            break;
+        } else if (tokens[0] === ",") {
+            tokens.shift();
+        } else {
+            const key = tokens.shift()!
+            shiftExpected(tokens, "=");
+            const value = parseNextExpression(tokens);
+            entries[key] = value;
+        }
+    }
+    return {
+        type: "table",
+        entries
+    }
+}
+
 function parseNextPrefixExpression(tokens: Token[]): TreeNode {
     const head = tokens[0];
     if( tokens.length > 1 && tokens[1] === "=") {
@@ -234,6 +283,7 @@ function parseNextPrefixExpression(tokens: Token[]): TreeNode {
         case "true": return buildBooleanLiteral(tokens, true);
         case "false": return buildBooleanLiteral(tokens, false);
         case '"': return buildStringLiteral(tokens);
+        case '{': return buildTable(tokens);
     }
 
     if (Number.isInteger(Number.parseInt(head))) {

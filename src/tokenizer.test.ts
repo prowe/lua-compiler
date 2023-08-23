@@ -26,3 +26,23 @@ test("other math operators", () => {
 });
 
 test.todo("Handle string with quotes in it");
+
+test("table constructor", () => {
+    const tokens = tokenize("{balance = 5}");
+    expect(tokens).toEqual(["{", "balance", "=", "5", "}"]);
+});
+
+test("declaring a table method", () => {
+    const tokens = tokenize("function foo:bar(");
+    expect(tokens).toEqual(["function", "foo", ":", "bar", "("]);
+});
+
+test("accessing a table property", () => {
+    const tokens = tokenize("foo.bar");
+    expect(tokens).toEqual(["foo", ".", "bar"]);
+});
+
+test("a decimal number", () => {
+    const tokens = tokenize("34.23");
+    expect(tokens).toEqual(["34.23"]);
+});

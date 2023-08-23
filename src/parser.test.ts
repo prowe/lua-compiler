@@ -458,3 +458,129 @@ test("parse string as literal", () => {
         ]
     });
 });
+
+test("parse a negative number", () => {
+    const ast = parse("-5");
+    expect(ast).toEqual({
+        type: "block",
+        children: [
+            {
+                type: "literal",
+                value: -5
+            }
+        ]
+    });
+});
+
+test("simple keyed table", () => {
+    const ast = parse("{balance = 6}");
+    expect(ast).toEqual({
+        type: "block",
+        children: [
+            {
+                type: "table",
+                entries: {
+                    balance: {
+                        type: "literal",
+                        value: 6
+                    }
+                }
+            }
+        ]
+    });
+});
+
+test("table with multiple entries", () => {
+    const ast = parse(`{balance = 6, name = "blah"}`);
+    expect(ast).toEqual({
+        type: "block",
+        children: [
+            {
+                type: "table",
+                entries: {
+                    balance: {
+                        type: "literal",
+                        value: 6
+                    },
+                    name: {
+                        type: "literal",
+                        value: "blah"
+                    }
+                }
+            }
+        ]
+    });
+});
+
+test("method declaration", () => {
+    const ast = parse(`function foo:bar(self) end`);
+    expect(ast).toEqual({
+        type: "block",
+        children: [
+            {
+                type: "dereference",
+                scopeExpression: {
+                    type: "variable-reference",
+                    varName: "foo"
+                },
+                expression: {
+                    type: "function-declaration",
+                    name: "bar",
+                    parameters: ["self"],
+                    children: []
+                }
+            }
+        ]
+    });
+});
+
+test("method invocation", () => {
+    const ast = parse(`foo:bar(1)`);
+    expect(ast).toEqual({
+        type: "block",
+        children: [
+            {
+                type: "dereference",
+                scopeExpression: {
+                    type: "variable-reference",
+                    varName: "foo"
+                },
+                expression: {
+                    type: "function-call",
+                    func: {
+                        type: "variable-reference",
+                        varName: "bar"
+                    },
+                    parameters: [
+                        {
+                            type: "literal",
+                            value: 1
+                        }
+                    ]
+                }
+            }
+        ]
+    });
+});
+
+test("table propery reference", () => {
+    const ast = parse(`foo.bar`);
+    expect(ast).toEqual({
+        type: "block",
+        children: [
+            {
+                type: "dereference",
+                scopeExpression: {
+                    type: "variable-reference",
+                    varName: "foo"
+                },
+                expression: {
+                    type: "variable-reference",
+                    varName: "bar"
+                }
+            }
+        ]
+    });
+});
+
+test("")

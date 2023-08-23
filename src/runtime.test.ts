@@ -55,3 +55,30 @@ test("should invoke the print function", () => {
     expect(env.output).toHaveBeenCalledWith("hello world");
 });
 
+test("assign a table", () => {
+    const result = executeCode(`
+        Account = {balance = 6}
+        Account
+    `, envHooks);
+    expect(result).toEqual({
+        value: {
+            balance: {
+                value: 6
+            }
+        }
+    });
+});
+
+test("simple object oriented example", () => {
+    const result = executeCode(`
+        Account = {balance = 6}
+        function Account:withdraw (self, v)
+            self.balance = self.balance - v
+        end
+        Account:withdraw(5)
+        Account.balance
+    `, envHooks);
+    expect(result).toEqual({
+        value: 1
+    });
+});

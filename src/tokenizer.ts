@@ -19,7 +19,10 @@ export function tokenize(codeString: string) {
             currentToken += c;
         } else if (c.trim() === "") {
             pushCurrentToken();
-        } else if ([",", "(", ")", "+"].includes(c)) {
+        } else if ([",", "(", ")", "+", "}", "{", ":"].includes(c)) {
+            pushCurrentToken();
+            tokens.push(c);
+        } else if (c === "." && !Number.isInteger(Number.parseInt(currentToken))) {
             pushCurrentToken();
             tokens.push(c);
         } else {

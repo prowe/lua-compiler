@@ -1,4 +1,4 @@
-import { AssignmentNode, BlockNode, FunctionCallNode, FunctionDeclarationNode, InfixOperatorNode, LiteralNode, NotNode, parse, TreeNode, VariableReferenceNode } from "./parser";
+import { AssignmentNode, BlockNode, DereferenceNode, FunctionCallNode, FunctionDeclarationNode, InfixOperatorNode, LiteralNode, NotNode, parse, TableNode, TreeNode, VariableReferenceNode } from "./parser";
 
 export interface EvalResult {
     value?: any;
@@ -116,7 +116,7 @@ class Environment {
     "function-declaration"({name, parameters, children}: FunctionDeclarationNode) {
         this.stack[0][name] = {
             parameters,
-            children
+            children,
         };
     }
 
@@ -131,9 +131,14 @@ class Environment {
             return result;
         }
         if (funcDeclaration.parameters && funcDeclaration.children) {
-            funcDeclaration.parameters.forEach((paramName, index) => {
+            funcDeclaration.parameters
+                .filter(p => p!== "self")
+                .forEach((paramName, index) => {
                 this.stack[0][paramName] = parameterValues[index]; 
             });
+            if (funcDeclaration.parameters.includes("self")) {
+                this.stack[0]["self"] = { value: this.stack[1] };
+            }
             const result = this.block({
                 type: "block",
                 children: funcDeclaration.children
@@ -143,6 +148,28 @@ class Environment {
         }
         throw new Error("declaration not callable" + funcDeclaration);
     }
+
+    "table"({entries}: TableNode) {
+        const evaluatedEntries = Object.entries(entries)
+            .map(([key, valueExp]) => {
+                const value = this.evaluateNode(valueExp);
+                return [key, value]
+            });
+        return {
+            value: Object.fromEntries(evaluatedEntries)
+        }
+    }
+
+    "dereference"({scopeExpression, expression}: DereferenceNode) {
+        const scopeResult = this.evaluateNode(scopeExpression);
+        if (!scopeResult) {
+            throw new Error(`Unable to find scope for dereference: ${JSON.stringify(scopeExpression)}`);
+        }
+        this.stack.unshift(scopeResult.value);
+        const evalResult = this.evaluateNode(expression);
+        this.stack.shift();
+        return evalResult;
+    }
 };
 
 export interface EnvHooks {
@@ -151,6 +178,7 @@ export interface EnvHooks {
 
 export function executeCode(codeString: string, envHooks: EnvHooks) {
     const ast = parse(codeString);
+    console.warn(JSON.stringify(ast, null, 2));
     const env = new Environment(envHooks);
     return env.evaluateNode(ast);
 }
