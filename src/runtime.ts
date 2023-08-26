@@ -1,7 +1,8 @@
-import { AssignmentNode, BlockNode, DereferenceNode, FunctionCallNode, FunctionDeclarationNode, InfixOperatorNode, LiteralNode, NotNode, parse, TableNode, TreeNode, VariableReferenceNode } from "./parser";
+import { AssignmentNode, BlockNode, DereferenceNode, FunctionCallNode, FunctionDeclarationNode, InfixOperatorNode, LiteralNode, NotNode, parse, ReturnNode, TableNode, TreeNode, VariableReferenceNode } from "./parser";
 
 export interface EvalResult {
     value?: any;
+    shouldReturn?: boolean;
     builtIn?: Function;
     parameters?: FunctionDeclarationNode["parameters"];
     children?: FunctionDeclarationNode["children"];
@@ -40,6 +41,9 @@ class Environment {
         let lastResult = undefined;
         for (const child of children) {
             lastResult = this.evaluateNode(child);
+            if (lastResult?.shouldReturn) {
+                break;
+            }
         }
         return lastResult;
     }
@@ -170,6 +174,14 @@ class Environment {
         this.stack.shift();
         return evalResult;
     }
+
+    "return"({expression}: ReturnNode): EvalResult {
+        const result = this.evaluateNode(expression);
+        return {
+            ...result,
+            shouldReturn: true
+        }
+    }
 };
 
 export interface EnvHooks {
@@ -178,7 +190,6 @@ export interface EnvHooks {
 
 export function executeCode(codeString: string, envHooks: EnvHooks) {
     const ast = parse(codeString);
-    console.warn(JSON.stringify(ast, null, 2));
     const env = new Environment(envHooks);
     return env.evaluateNode(ast);
 }

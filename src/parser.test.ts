@@ -583,4 +583,18 @@ test("table propery reference", () => {
     });
 });
 
-test("")
+test("return early in a block", () => {
+    const ast = parse(`return 5`);
+    expect(ast).toEqual({
+        type: "block",
+        children: [
+            {
+                type: "return",
+                expression: {
+                    type: "literal",
+                    value: 5
+                }
+            }
+        ]
+    });
+})

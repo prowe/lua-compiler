@@ -82,3 +82,12 @@ test("simple object oriented example", () => {
         value: 1
     });
 });
+
+test("return early from a block", () => {
+    const result = executeCode(`
+        1
+        return 2
+        3
+    `, envHooks);
+    expect(result.value).toEqual(2);
+});
