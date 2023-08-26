@@ -124,7 +124,7 @@ class Environment {
         };
     }
 
-    "function-call"({func, parameters}: FunctionCallNode) {
+    "function-call"({func, parameters}: FunctionCallNode): EvalResult {
         const funcDeclaration = this.evaluateNode(func);
         this.stack.unshift({});
         const parameterValues = parameters.map(exp => this.evaluateNode(exp));
@@ -148,7 +148,10 @@ class Environment {
                 children: funcDeclaration.children
             });
             this.stack.shift();
-            return result;
+            return {
+                ...result,
+                shouldReturn: false
+            };
         }
         throw new Error("declaration not callable" + funcDeclaration);
     }

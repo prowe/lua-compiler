@@ -37,9 +37,7 @@ test.each([
 
 ])("evaluate '%s' should result in a literal '%s'", (codeString, expectedValue) => {
     const result = executeCode(codeString, envHooks);
-    expect(result).toEqual({
-        value: expectedValue
-    });
+    expect(result.value).toEqual(expectedValue);
 });
 
 test("throws error when variable not found", () => {
@@ -88,6 +86,20 @@ test("return early from a block", () => {
         1
         return 2
         3
+    `, envHooks);
+    expect(result.value).toEqual(2);
+});
+
+test("return inside a function call", () => {
+    const result = executeCode(`
+        function a()
+            return 1
+        end
+        function b()
+            a()
+            2
+        end
+        b()
     `, envHooks);
     expect(result.value).toEqual(2);
 });
