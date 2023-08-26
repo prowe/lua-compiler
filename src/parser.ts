@@ -32,6 +32,12 @@ export interface TableNode extends TreeNode {
     type: "table",
     entries: Record<string, TreeNode>;
 }
+export interface IfNode extends TreeNode {
+    type: "if",
+    conditionExpression: TreeNode;
+    children: TreeNode[];
+    elseChildren?: TreeNode[];
+}
 
 type ProductOperator = "*" | "/" | "%";
 type AdditionOperator = "+" | "-";
@@ -267,6 +273,47 @@ function buildTable(tokens: Token[]): TableNode {
     }
 }
 
+function buildIfStatement(tokens: Token[]): IfNode {
+    tokens.shift();
+    const conditionExpression = parseNextExpression(tokens);
+    shiftExpected(tokens, "then");
+    const children: TreeNode[] = [];
+    while (true) {
+        if (tokens[0] === "end") {
+            tokens.shift();
+            return {
+                type: "if",
+                conditionExpression,
+                children
+            };
+        }
+        if (tokens[0] === "else") {
+            tokens.shift();
+            const elseChildren: TreeNode[] = [];
+            while (tokens[0] !== "end") {
+                elseChildren.push(parseNextExpression(tokens));
+            }
+            shiftExpected(tokens, "end");
+            return {
+                type: "if",
+                conditionExpression,
+                children,
+                elseChildren
+            };
+        }
+        if (tokens[0] === "elseif") {
+            const elseChildren = [buildIfStatement(tokens)];
+            return {
+                type: "if",
+                conditionExpression,
+                children,
+                elseChildren
+            };
+        }
+        children.push(parseNextExpression(tokens));
+    }
+}
+
 function parseNextPrefixExpression(tokens: Token[]): TreeNode {
     const head = tokens[0];
     if( tokens.length > 1 && tokens[1] === "=") {
@@ -284,6 +331,7 @@ function parseNextPrefixExpression(tokens: Token[]): TreeNode {
         case "false": return buildBooleanLiteral(tokens, false);
         case '"': return buildStringLiteral(tokens);
         case '{': return buildTable(tokens);
+        case 'if': return buildIfStatement(tokens);
     }
 
     if (Number.isInteger(Number.parseInt(head))) {

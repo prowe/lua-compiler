@@ -1,4 +1,4 @@
-import { AssignmentNode, BlockNode, DereferenceNode, FunctionCallNode, FunctionDeclarationNode, InfixOperatorNode, LiteralNode, NotNode, parse, ReturnNode, TableNode, TreeNode, VariableReferenceNode } from "./parser";
+import { AssignmentNode, BlockNode, DereferenceNode, FunctionCallNode, FunctionDeclarationNode, IfNode, InfixOperatorNode, LiteralNode, NotNode, parse, ReturnNode, TableNode, TreeNode, VariableReferenceNode } from "./parser";
 
 export interface EvalResult {
     value?: any;
@@ -184,6 +184,17 @@ class Environment {
             ...result,
             shouldReturn: true
         }
+    }
+
+    "if"({conditionExpression, children}: IfNode): EvalResult {
+        const conditionResult = this.evaluateNode(conditionExpression);
+        if (conditionResult.value !== false) {
+            this.block({
+                type: "block",
+                children
+            });
+        }
+        return {};
     }
 };
 

@@ -103,3 +103,25 @@ test("return inside a function call", () => {
     `, envHooks);
     expect(result.value).toEqual(2);
 });
+
+test("if statement with true", () => {
+    const result = executeCode(`
+        local x = 1
+        if true then
+            x = 2
+        end
+        x
+    `, envHooks);
+    expect(result.value).toEqual(2);
+});
+
+test("if statement with false", () => {
+    const result = executeCode(`
+        local x = 1
+        if false then
+            2
+        end
+        x
+    `, envHooks);
+    expect(result.value).toEqual(1);
+});

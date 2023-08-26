@@ -597,4 +597,115 @@ test("return early in a block", () => {
             }
         ]
     });
-})
+});
+
+test("if statement", () => {
+    const ast = parse(`
+        if true then
+            78
+        end
+    `);
+    expect(ast).toEqual({
+        type: "block",
+        children: [
+            {
+                type: "if",
+                conditionExpression: {
+                    type: "literal",
+                    value: true
+                },
+                children: [
+                    {
+                        type: "literal",
+                        value: 78
+                    }
+                ]
+            }
+        ]
+    });
+});
+
+test("if with else", () => {
+    const ast = parse(`
+        if true then
+            2
+        else
+            3
+        end
+    `);
+    expect(ast).toEqual({
+        type: "block",
+        children: [
+            {
+                type: "if",
+                conditionExpression: {
+                    type: "literal",
+                    value: true
+                },
+                children: [
+                    {
+                        type: "literal",
+                        value: 2
+                    }
+                ],
+                elseChildren: [
+                    {
+                        type: "literal",
+                        value: 3
+                    }
+                ]
+            }
+        ]
+    });
+});
+
+test("else if", () => {
+    const ast = parse(`
+        if true then
+            2
+        elseif false then
+            3
+        else
+            4
+        end
+    `);
+    expect(ast).toEqual({
+        type: "block",
+        children: [
+            {
+                type: "if",
+                conditionExpression: {
+                    type: "literal",
+                    value: true
+                },
+                children: [
+                    {
+                        type: "literal",
+                        value: 2
+                    }
+                ],
+                elseChildren: [
+                    {
+                        type: "if",
+                        conditionExpression: {
+                            type: "literal",
+                            value: false
+                        },
+                        children: [
+                            {
+                                type: "literal",
+                                value: 3
+                            }
+                        ],
+                        elseChildren: [
+                            {
+                                type: "literal",
+                                value: 4
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    });
+});
